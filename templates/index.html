@@ -1,0 +1,225 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Login Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      background: #f5f7fa;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 24px;
+      color: #1a1a1a;
+    }
+    input, button {
+      width: 100%;
+      padding: 14px 16px;
+      margin: 6px 0;
+      font-size: 16px;          /* prevents iOS zoom on focus */
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      outline: none;
+      -webkit-appearance: none;  /* remove iOS default styling */
+    }
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      margin: 0;
+      border-radius: 4px;
+      -webkit-appearance: checkbox;
+      appearance: checkbox;
+      flex-shrink: 0;
+    }
+    input:focus {
+      border-color: #4a90d9;
+      box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15);
+    }
+    button {
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:active {
+      background: #3a7bc8;
+      transform: scale(0.98);
+    }
+    #loginBtn {
+      background: #4a90d9;
+      font-size: 17px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    #loginBtn:active { background: #3a7bc8; }
+    .register-link {
+      text-align: center;
+      margin: 14px 0 6px;
+      font-size: 14px;
+      color: #888;
+    }
+    .register-link a {
+      color: #4a90d9;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .register-link a:active { color: #3a7bc8; }
+    #registerForm {
+      display: none;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+    #registerForm h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      text-align: center;
+      color: #1a1a1a;
+    }
+    #registerBtn {
+      background: #28a745;
+    }
+    #registerBtn:active { background: #218838; }
+    .cancel-link {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    .cancel-link a {
+      color: #888;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .msg {
+      font-size: 15px;
+      text-align: center;
+      padding: 10px;
+      margin-top: 12px;
+      border-radius: 8px;
+      color: #444;
+    }
+    .ok { color: #28a745; background: #e8f5e9; }
+    .err { color: #dc3545; background: #fdecea; }
+  </style>
+</head>
+<body>
+  <h2>Staff Login</h2>
+
+  <input id="username" placeholder="Username" autocomplete="username" />
+  <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+
+  <label style="display:flex; align-items:center; gap:8px; margin:8px 0; font-size:14px; color:#555; cursor:pointer;">
+    <input type="checkbox" id="rememberMe" style="width:auto; margin:0; accent-color:#4a90d9;" />
+    Remember my login details
+  </label>
+
+  <button id="loginBtn">Login</button>
+
+  <div class="register-link">Not a user? <a href="#" id="showRegister">Register here</a></div>
+
+  <div id="registerForm">
+    <h3>Create Account</h3>
+    <input id="regUsername" placeholder="Username (min 3 chars)" autocomplete="username" />
+    <input id="regPassword" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+    <button id="registerBtn">Register</button>
+    <div class="cancel-link"><a href="#" id="cancelRegister">Cancel</a></div>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <script>
+    const API_BASE = "";  // relative — always same origin as the page
+
+    // ---- Remember-me: load saved credentials on page load ----
+    const STORAGE_KEY = "login_saved";
+    (function loadSaved() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved && saved.username) {
+          document.getElementById("username").value = saved.username;
+          document.getElementById("password").value = saved.password || "";
+          document.getElementById("rememberMe").checked = true;
+        }
+      } catch(e) {}
+    })();
+
+    function setMsg(text, ok=true) {
+      const el = document.getElementById("msg");
+      el.textContent = text;
+      el.className = "msg " + (ok ? "ok" : "err");
+    }
+
+    function val() {
+      return {
+        username: document.getElementById("username").value.trim(),
+        password: document.getElementById("password").value
+      };
+    }
+
+    async function post(path, body) {
+      const r = await fetch(API_BASE + path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // IMPORTANT: send/receive session cookie
+        body: JSON.stringify(body)
+      });
+      const data = await r.json().catch(() => ({}));
+      return { ok: r.ok, status: r.status, data };
+    }
+
+    // ---- Register form show/hide ----
+    document.getElementById("showRegister").onclick = (e) => {
+      e.preventDefault();
+      document.getElementById("registerForm").style.display = "block";
+    };
+    document.getElementById("cancelRegister").onclick = (e) => {
+      e.preventDefault();
+      document.getElementById("registerForm").style.display = "none";
+    };
+
+    document.getElementById("registerBtn").onclick = async () => {
+      const username = document.getElementById("regUsername").value.trim();
+      const password = document.getElementById("regPassword").value;
+      if (username.length < 3) return setMsg("Username must be at least 3 characters.", false);
+      if (password.length < 8) return setMsg("Password must be at least 8 characters.", false);
+      const res = await post("/api/register", { username, password });
+      if (!res.ok) return setMsg(res.data.error || "Register failed", false);
+      setMsg("Registered! You can now login.");
+      document.getElementById("registerForm").style.display = "none";
+      // Pre-fill login fields with the newly registered credentials
+      document.getElementById("username").value = username;
+      document.getElementById("password").value = password;
+    };
+
+    document.getElementById("loginBtn").onclick = async () => {
+      const { username, password } = val();
+      const res = await post("/api/login", { username, password });
+      if (!res.ok) return setMsg(res.data.error || "Login failed", false);
+
+      // ---- Remember-me: save or clear after successful login ----
+      const remember = document.getElementById("rememberMe").checked;
+      if (remember) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ username, password }));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
+    };
+  </script>
+</body>
+</html>

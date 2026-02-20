@@ -1,0 +1,357 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Admin – Login Records</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h2 { margin-bottom: 14px; }
+
+    /* ---- Filter bar ---- */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      margin-bottom: 14px; padding: 14px 16px;
+      background: #fff; border-radius: 10px; border: 1px solid #e0e0e0;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 3px; }
+    .filter-group label {
+      font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .filter-group input, .filter-group select {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; outline: none;
+    }
+    .filter-group input:focus, .filter-group select:focus {
+      border-color: #4a90d9; box-shadow: 0 0 0 2px rgba(74,144,217,0.15);
+    }
+    .filter-group input[type="text"] { width: 180px; }
+    .filter-group input[type="date"] { width: 150px; }
+    .filter-group select { width: 130px; }
+
+    .filter-btn {
+      padding: 8px 18px; border: none; border-radius: 6px; font-size: 13px;
+      font-weight: 600; cursor: pointer; color: #fff; white-space: nowrap;
+    }
+    .btn-clear { background: #6c757d; }
+    .btn-clear:hover { background: #5a6268; }
+    .btn-ot-sum { background: #6f42c1; }
+    .btn-ot-sum:hover { background: #5a32a3; }
+
+    /* ---- OT Summary box ---- */
+    .ot-summary {
+      display: none; margin-bottom: 14px; padding: 16px 20px;
+      background: linear-gradient(135deg, #f3e5f5 0%, #fff 100%);
+      border: 1px solid #ce93d8; border-radius: 10px;
+    }
+    .ot-summary.show { display: block; }
+    .ot-summary h3 { margin: 0 0 8px; font-size: 16px; color: #6f42c1; }
+    .ot-summary .ot-total {
+      font-size: 32px; font-weight: 800; color: #6f42c1;
+    }
+    .ot-summary .ot-detail { font-size: 13px; color: #666; margin-top: 4px; }
+    .ot-summary .ot-per-user { margin-top: 10px; font-size: 13px; }
+    .ot-summary .ot-per-user div {
+      display: flex; justify-content: space-between; padding: 3px 0;
+      border-bottom: 1px solid #f0e0f5;
+    }
+    .ot-summary .ot-per-user div:last-child { border-bottom: none; }
+    .ot-summary .ot-user-name { font-weight: 600; color: #333; }
+    .ot-summary .ot-user-val { font-weight: 700; color: #6f42c1; }
+
+    .count { font-size: 13px; color: #666; margin-bottom: 8px; }
+
+    /* ---- Table ---- */
+    .table-wrapper { overflow-x: auto; }
+    table {
+      border-collapse: collapse; width: 100%; font-size: 13px; background: #fff;
+    }
+    th, td {
+      border: 1px solid #ddd; padding: 6px 10px; text-align: left; white-space: nowrap;
+    }
+    th {
+      background: #e8e8e8; position: sticky; top: 0; cursor: pointer; user-select: none;
+    }
+    th:hover { background: #dcdcdc; }
+    tr:nth-child(even) { background: #fafafa; }
+    tr:hover { background: #eef4ff; }
+    .badge {
+      display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: bold;
+    }
+    .badge-browser  { background: #d4edda; color: #155724; }
+    .badge-none     { background: #f8d7da; color: #721c24; }
+    .badge-other    { background: #fff3cd; color: #856404; }
+    .badge-clockin  { background: #cce5ff; color: #004085; }
+    .badge-clockout { background: #e2d5f1; color: #3b1f6e; }
+    .badge-late     { background: #f8d7da; color: #721c24; }
+    .badge-ontime   { background: #d4edda; color: #155724; }
+    .badge-ot       { background: #fff3cd; color: #856404; }
+  </style>
+</head>
+<body>
+
+<h2>Login Audit Records</h2>
+
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Username</label>
+    <input type="text" id="filterName" placeholder="Filter by name…" />
+  </div>
+  <div class="filter-group">
+    <label>Date From</label>
+    <input type="date" id="filterDateFrom" />
+  </div>
+  <div class="filter-group">
+    <label>Date To</label>
+    <input type="date" id="filterDateTo" />
+  </div>
+  <div class="filter-group">
+    <label>OT</label>
+    <select id="filterOT">
+      <option value="all">All</option>
+      <option value="ot">Has OT</option>
+      <option value="no-ot">No OT</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Event</label>
+    <select id="filterEvent">
+      <option value="all">All</option>
+      <option value="Clock In">Clock In</option>
+      <option value="Clock Out">Clock Out</option>
+    </select>
+  </div>
+  <button class="filter-btn btn-ot-sum" id="otSumBtn" title="Sum OT hours for visible records">∑ Sum OT</button>
+  <button class="filter-btn btn-clear" id="clearBtn">Clear Filters</button>
+</div>
+
+<div class="ot-summary" id="otSummary"></div>
+
+<div class="count" id="countInfo"></div>
+
+<div class="table-wrapper">
+<table id="logins">
+  <thead>
+    <tr>
+      <th data-col="0">ID</th>
+      <th data-col="1">Username</th>
+      <th data-col="2">Time (SGT)</th>
+      <th data-col="3">Event</th>
+      <th data-col="4">Status</th>
+      <th data-col="5">OT</th>
+      <th data-col="6">Working Hours</th>
+      <th data-col="7">Area</th>
+      <th data-col="8">Address</th>
+      <th data-col="9">IP</th>
+      <th data-col="10">Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in records %}
+    <tr data-username="{{ r.username|lower }}"
+        data-time="{{ r.login_time }}"
+        data-event="{{ r.event_type or '' }}"
+        data-ot="{{ r.ot_minutes or 0 }}">
+      <td>{{ r.id }}</td>
+      <td>{{ r.username }}</td>
+      <td>{{ r.login_time }}</td>
+      <td>
+        {% if r.event_type == 'Clock In' %}
+          <span class="badge badge-clockin">Clock In</span>
+        {% elif r.event_type == 'Clock Out' %}
+          <span class="badge badge-clockout">Clock Out</span>
+        {% else %}
+          {{ r.event_type or "" }}
+        {% endif %}
+      </td>
+      <td>
+        {% if r.event_type == 'Clock In' %}
+          {% if r.is_late %}
+            <span class="badge badge-late">Late</span>
+          {% else %}
+            <span class="badge badge-ontime">On Time</span>
+          {% endif %}
+        {% endif %}
+      </td>
+      <td>
+        {% if r.event_type == 'Clock Out' and r.ot_minutes and r.ot_minutes > 0 %}
+          <span class="badge badge-ot">{{ r.ot_minutes // 60 }}h {{ r.ot_minutes % 60 }}m</span>
+        {% elif r.event_type == 'Clock Out' %}
+          –
+        {% endif %}
+      </td>
+      <td>
+        {% if r.event_type == 'Clock Out' and r.working_minutes and r.working_minutes > 0 %}
+          {{ r.working_minutes // 60 }}h {{ r.working_minutes % 60 }}m
+        {% elif r.event_type == 'Clock Out' %}
+          –
+        {% endif %}
+      </td>
+      <td>{{ r.area or "" }}</td>
+      <td title="{{ r.address_text or '' }}" style="max-width:320px;overflow:hidden;text-overflow:ellipsis;">{{ r.address_text or "" }}</td>
+      <td>{{ r.ip }}</td>
+      <td>
+        {% if r.location_source == 'browser' %}
+          <span class="badge badge-browser">browser</span>
+        {% elif r.location_source == 'none' %}
+          <span class="badge badge-none">none</span>
+        {% else %}
+          <span class="badge badge-other">{{ r.location_source }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<script>
+  const filterName     = document.getElementById("filterName");
+  const filterDateFrom = document.getElementById("filterDateFrom");
+  const filterDateTo   = document.getElementById("filterDateTo");
+  const filterOT       = document.getElementById("filterOT");
+  const filterEvent    = document.getElementById("filterEvent");
+  const tbody          = document.querySelector("#logins tbody");
+  const allRows        = Array.from(tbody.querySelectorAll("tr"));
+  const countEl        = document.getElementById("countInfo");
+  const otSummaryEl    = document.getElementById("otSummary");
+
+  // ---- Parse date from "DD Mon YYYY HH:MM:SS AM/PM" format ----
+  function parseRecordDate(timeStr) {
+    if (!timeStr) return null;
+    try {
+      return new Date(timeStr);
+    } catch(e) { return null; }
+  }
+
+  // ---- Apply all filters ----
+  function applyFilters() {
+    const nameVal  = filterName.value.toLowerCase().trim();
+    const fromVal  = filterDateFrom.value;  // "YYYY-MM-DD" or ""
+    const toVal    = filterDateTo.value;
+    const otVal    = filterOT.value;         // "all", "ot", "no-ot"
+    const eventVal = filterEvent.value;      // "all", "Clock In", "Clock Out"
+
+    const fromDate = fromVal ? new Date(fromVal + "T00:00:00") : null;
+    const toDate   = toVal   ? new Date(toVal   + "T23:59:59") : null;
+
+    allRows.forEach(row => {
+      let show = true;
+
+      // Name filter
+      if (nameVal && !row.dataset.username.includes(nameVal)) show = false;
+
+      // Date filter
+      if (show && (fromDate || toDate)) {
+        const d = parseRecordDate(row.dataset.time);
+        if (d) {
+          if (fromDate && d < fromDate) show = false;
+          if (toDate   && d > toDate)   show = false;
+        }
+      }
+
+      // OT filter
+      if (show && otVal !== "all") {
+        const ot = parseInt(row.dataset.ot) || 0;
+        if (otVal === "ot"    && ot <= 0) show = false;
+        if (otVal === "no-ot" && ot > 0)  show = false;
+      }
+
+      // Event filter
+      if (show && eventVal !== "all") {
+        if (row.dataset.event !== eventVal) show = false;
+      }
+
+      row.style.display = show ? "" : "none";
+    });
+    updateCount();
+    otSummaryEl.classList.remove("show"); // hide OT summary when filters change
+  }
+
+  function updateCount() {
+    const visible = allRows.filter(r => r.style.display !== "none").length;
+    countEl.textContent = `Showing ${visible} of ${allRows.length} record(s)`;
+  }
+  updateCount();
+
+  // Attach filter events
+  filterName.addEventListener("keyup", applyFilters);
+  filterDateFrom.addEventListener("change", applyFilters);
+  filterDateTo.addEventListener("change", applyFilters);
+  filterOT.addEventListener("change", applyFilters);
+  filterEvent.addEventListener("change", applyFilters);
+
+  // ---- Clear Filters ----
+  document.getElementById("clearBtn").onclick = () => {
+    filterName.value = "";
+    filterDateFrom.value = "";
+    filterDateTo.value = "";
+    filterOT.value = "all";
+    filterEvent.value = "all";
+    applyFilters();
+    otSummaryEl.classList.remove("show");
+  };
+
+  // ---- Sum OT Hours ----
+  function fmtMinutes(m) {
+    const h = Math.floor(m / 60);
+    const mins = m % 60;
+    return h > 0 ? h + "h " + mins + "m" : mins + "m";
+  }
+
+  document.getElementById("otSumBtn").onclick = () => {
+    const visibleRows = allRows.filter(r => r.style.display !== "none");
+    let totalOT = 0;
+    const perUser = {};
+
+    visibleRows.forEach(row => {
+      const ot = parseInt(row.dataset.ot) || 0;
+      if (ot > 0) {
+        totalOT += ot;
+        const user = row.children[1].textContent.trim();
+        perUser[user] = (perUser[user] || 0) + ot;
+      }
+    });
+
+    const otCount = visibleRows.filter(r => (parseInt(r.dataset.ot) || 0) > 0).length;
+
+    let html = `<h3>∑ OT Summary (filtered records)</h3>`;
+    html += `<div class="ot-total">${fmtMinutes(totalOT)}</div>`;
+    html += `<div class="ot-detail">${otCount} record(s) with OT out of ${visibleRows.length} visible</div>`;
+
+    const sorted = Object.entries(perUser).sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0) {
+      html += '<div class="ot-per-user">';
+      for (const [user, mins] of sorted) {
+        html += `<div><span class="ot-user-name">${user}</span><span class="ot-user-val">${fmtMinutes(mins)}</span></div>`;
+      }
+      html += '</div>';
+    }
+
+    otSummaryEl.innerHTML = html;
+    otSummaryEl.classList.add("show");
+  };
+
+  // ---- Column sorting (click header) ----
+  document.querySelectorAll("#logins th[data-col]").forEach(th => {
+    let asc = true;
+    th.addEventListener("click", () => {
+      const col = parseInt(th.dataset.col);
+      allRows.sort((a, b) => {
+        const va = a.children[col].textContent.trim();
+        const vb = b.children[col].textContent.trim();
+        const na = parseFloat(va), nb = parseFloat(vb);
+        if (!isNaN(na) && !isNaN(nb)) return asc ? na - nb : nb - na;
+        return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+      });
+      asc = !asc;
+      allRows.forEach(r => tbody.appendChild(r));
+    });
+  });
+</script>
+
+</body>
+</html>

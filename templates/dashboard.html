@@ -1,0 +1,775 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    /* ---- Top bar ---- */
+    .topbar {
+      background: #fff;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar .greeting { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+    .topbar .greeting span { color: #4a90d9; }
+    .topbar .logout-btn {
+      background: none; border: 1px solid #dc3545; color: #dc3545;
+      padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .topbar .logout-btn:active { background: #dc3545; color: #fff; }
+
+    .container { max-width: 520px; margin: 0 auto; padding: 24px 16px; }
+
+    /* ---- Feature boxes ---- */
+    .boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .box {
+      background: #fff; border-radius: 16px; padding: 24px 16px; text-align: center;
+      cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 2px solid transparent;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .box:active { transform: scale(0.96); }
+    .box .icon { font-size: 40px; line-height: 1; }
+    .box .box-title { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+    .box .box-desc { font-size: 12px; color: #888; line-height: 1.3; }
+    .box-clockin  { border-color: #e8f5e9; background: linear-gradient(135deg, #e8f5e9 0%, #fff 100%); }
+    .box-clockout { border-color: #fbe9e7; background: linear-gradient(135deg, #fbe9e7 0%, #fff 100%); }
+    .box-leave    { border-color: #fce4ec; background: linear-gradient(135deg, #fce4ec 0%, #fff 100%); }
+    .box-balance  { border-color: #e3f2fd; background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%); }
+    .box-records  { border-color: #f3e5f5; background: linear-gradient(135deg, #f3e5f5 0%, #fff 100%); }
+    .box-admin    { border-color: #fff3e0; background: linear-gradient(135deg, #fff3e0 0%, #fff 100%); }
+    .box-manage   { border-color: #e0f7fa; background: linear-gradient(135deg, #e0f7fa 0%, #fff 100%); }
+    .box-staffleave { border-color: #f1f8e9; background: linear-gradient(135deg, #f1f8e9 0%, #fff 100%); }
+
+    /* ---- Staff overview cards ---- */
+    .staff-overview {
+      background: #fff; border-radius: 12px; border: 1px solid #e0e0e0;
+      padding: 16px; margin-bottom: 14px;
+    }
+    .staff-overview .so-name {
+      font-weight: 700; font-size: 16px; color: #1a1a1a;
+      padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee;
+    }
+    .staff-overview .so-bal-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 0; font-size: 13px; color: #555;
+    }
+    .staff-overview .so-bal-row .so-type { font-weight: 600; color: #333; }
+    .staff-overview .so-bal-row .so-remain { font-weight: 800; font-size: 15px; }
+    .staff-overview .so-bal-row .so-remain.low { color: #dc3545; }
+    .staff-overview .so-bal-row .so-remain.ok { color: #28a745; }
+    .staff-overview .so-leaves { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f0f0f0; }
+    .staff-overview .so-leave-item {
+      font-size: 12px; color: #666; padding: 3px 0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .so-leave-item .so-badge {
+      font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; color: #fff;
+    }
+
+    /* ---- Message ---- */
+    .msg { text-align: center; padding: 12px; margin-bottom: 16px; border-radius: 10px; font-size: 15px; display: none; }
+    .msg.show { display: block; }
+    .msg.ok  { color: #28a745; background: #e8f5e9; }
+    .msg.err { color: #dc3545; background: #fdecea; }
+    .msg.info { color: #0d6efd; background: #e7f1ff; }
+
+    /* ---- Content section (below boxes) ---- */
+    #content-section { margin-top: 20px; }
+    #content-section h3 { font-size: 18px; margin: 0 0 12px; color: #1a1a1a; text-align: center; }
+
+    /* ---- Record cards ---- */
+    .record-card {
+      background: #fff; border-radius: 10px; border: 1px solid #e0e0e0;
+      padding: 14px 16px; margin-bottom: 10px;
+    }
+    .record-card .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .record-card .record-user { font-weight: 700; font-size: 15px; color: #1a1a1a; }
+    .record-card .record-type { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px; color: #fff; }
+    .type-clockin  { background: #28a745; }
+    .type-clockout { background: #fd7e14; }
+    .record-card .record-row { font-size: 13px; color: #555; line-height: 1.7; }
+    .record-card .record-row span.label { color: #888; display: inline-block; min-width: 70px; }
+    .badge-late { display: inline-block; background: #dc3545; color: #fff; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; }
+    .badge-ot   { display: inline-block; background: #6f42c1; color: #fff; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-left: 6px; }
+
+    /* ---- Balance cards ---- */
+    .balance-card {
+      background: #fff; border-radius: 12px; border: 1px solid #e0e0e0;
+      padding: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .balance-card .bl-type { font-weight: 700; font-size: 15px; color: #1a1a1a; }
+    .balance-card .bl-detail { font-size: 13px; color: #666; margin-top: 4px; }
+    .balance-card .bl-number {
+      font-size: 28px; font-weight: 800; color: #4a90d9; min-width: 50px; text-align: center;
+    }
+    .balance-card .bl-number.low { color: #dc3545; }
+
+    /* ---- Leave history cards ---- */
+    .leave-card {
+      background: #fff; border-radius: 10px; border: 1px solid #e0e0e0;
+      padding: 14px 16px; margin-bottom: 10px;
+    }
+    .leave-card .lc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .leave-card .lc-type { font-weight: 700; font-size: 14px; }
+    .leave-card .lc-status { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 10px; color: #fff; }
+    .status-pending  { background: #ffc107; color: #333 !important; }
+    .status-approved { background: #28a745; }
+    .status-rejected { background: #dc3545; }
+    .leave-card .lc-row { font-size: 13px; color: #555; line-height: 1.7; }
+    .leave-card .lc-row span.label { color: #888; display: inline-block; min-width: 60px; }
+    .leave-card .admin-actions { margin-top: 8px; display: flex; gap: 8px; }
+    .leave-card .admin-actions button {
+      flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 13px;
+      font-weight: 600; cursor: pointer; color: #fff;
+    }
+    .btn-approve { background: #28a745; }
+    .btn-approve:active { background: #218838; }
+    .btn-reject { background: #dc3545; }
+    .btn-reject:active { background: #c82333; }
+
+    /* ---- Admin entitlement table ---- */
+    .ent-staff-card {
+      background: #fff; border-radius: 12px; border: 1px solid #e0e0e0;
+      padding: 16px; margin-bottom: 14px;
+    }
+    .ent-staff-card .ent-name { font-weight: 700; font-size: 16px; margin-bottom: 10px; color: #1a1a1a; }
+    .ent-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .ent-row .ent-label { font-size: 13px; color: #555; flex: 1; }
+    .ent-row input {
+      width: 70px; padding: 6px 8px; font-size: 15px; border: 1px solid #ddd;
+      border-radius: 8px; text-align: center; outline: none;
+    }
+    .ent-row input:focus { border-color: #4a90d9; }
+    .ent-row .ent-info { font-size: 11px; color: #999; }
+    .ent-save-btn {
+      width: 100%; padding: 10px; border: none; border-radius: 8px;
+      background: #4a90d9; color: #fff; font-size: 14px; font-weight: 600;
+      cursor: pointer; margin-top: 6px;
+    }
+    .ent-save-btn:active { background: #3a7bc8; }
+
+    .no-records { text-align: center; color: #999; padding: 20px; font-size: 14px; }
+
+    /* ---- Overlay ---- */
+    .overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 100; justify-content: center; align-items: center; padding: 20px;
+    }
+    .overlay.show { display: flex; }
+    .overlay-card {
+      background: #fff; border-radius: 16px; padding: 24px 20px;
+      width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+    }
+    .overlay-card h3 { font-size: 20px; margin-bottom: 16px; text-align: center; color: #1a1a1a; }
+    .overlay-card label { display: block; font-size: 14px; font-weight: 600; color: #555; margin: 12px 0 4px; }
+    .overlay-card input, .overlay-card select, .overlay-card textarea {
+      width: 100%; padding: 12px 14px; font-size: 16px;
+      border: 1px solid #ddd; border-radius: 10px; outline: none; -webkit-appearance: none;
+    }
+    .overlay-card textarea { resize: vertical; min-height: 80px; }
+    .overlay-card input:focus, .overlay-card select:focus, .overlay-card textarea:focus {
+      border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+    }
+    .overlay-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+    .overlay-btns button {
+      padding: 13px; font-size: 16px; border: none; border-radius: 10px;
+      font-weight: 600; cursor: pointer; color: #fff;
+    }
+    .btn-submit { background: #4a90d9; }
+    .btn-submit:active { background: #3a7bc8; }
+    .btn-cancel { background: #6c757d; }
+    .btn-cancel:active { background: #5a6268; }
+
+    /* Balance info in leave overlay */
+    .leave-bal-info {
+      background: #f8f9fa; border-radius: 8px; padding: 10px 14px;
+      font-size: 13px; color: #555; margin-top: 8px;
+    }
+    .leave-bal-info strong { color: #1a1a1a; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="greeting">Hi, <span id="dispUser">...</span></div>
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+
+  <div class="container">
+    <div id="msg" class="msg"></div>
+
+    <!-- Attendance group -->
+    <div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Attendance</div>
+    <div class="boxes">
+      <div class="box box-clockin" id="clockInBox">
+        <div class="icon">🟢</div>
+        <div class="box-title">Clock In</div>
+        <div class="box-desc">Start your day</div>
+      </div>
+      <div class="box box-clockout" id="clockOutBox">
+        <div class="icon">🔴</div>
+        <div class="box-title">Clock Out</div>
+        <div class="box-desc">End your day</div>
+      </div>
+      <div class="box box-records" id="recordsBox">
+        <div class="icon">📋</div>
+        <div class="box-title">My Records</div>
+        <div class="box-desc">Attendance & OT history</div>
+      </div>
+      <div class="box box-admin" id="adminBox" style="display:none;">
+        <div class="icon">🔑</div>
+        <div class="box-title">All Attendance & OT</div>
+        <div class="box-desc">All staff records</div>
+      </div>
+    </div>
+
+    <!-- Leave group -->
+    <div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px;">Leave</div>
+    <div class="boxes">
+      <div class="box box-leave" id="leaveBox">
+        <div class="icon">📝</div>
+        <div class="box-title">Apply Leave</div>
+        <div class="box-desc">Submit leave request</div>
+      </div>
+      <div class="box box-balance" id="balanceBox">
+        <div class="icon">📊</div>
+        <div class="box-title">Leave Balance</div>
+        <div class="box-desc">View remaining days</div>
+      </div>
+      <div class="box box-manage" id="manageLeaveBox" style="display:none;">
+        <div class="icon">⚙️</div>
+        <div class="box-title">Leave Management</div>
+        <div class="box-desc">Entitlements & approvals</div>
+      </div>
+      <div class="box box-staffleave" id="staffLeaveBox" style="display:none;">
+        <div class="icon">📑</div>
+        <div class="box-title">All Leave Records</div>
+        <div class="box-desc">Staff balances & history</div>
+      </div>
+    </div>
+
+    <div id="content-section"></div>
+  </div>
+
+  <!-- Leave application overlay -->
+  <div class="overlay" id="leaveOverlay">
+    <div class="overlay-card">
+      <h3>Leave Application</h3>
+      <label for="leaveType">Leave Type</label>
+      <select id="leaveType">
+        <option value="Annual Leave">Annual Leave</option>
+        <option value="Sick Leave">Sick Leave</option>
+        <option value="Child Care Leave">Child Care Leave</option>
+      </select>
+      <div id="leaveBalInfo" class="leave-bal-info"></div>
+      <label for="leaveFrom">From</label>
+      <input type="date" id="leaveFrom" />
+      <label for="leaveTo">To</label>
+      <input type="date" id="leaveTo" />
+      <label for="leaveReason">Reason</label>
+      <textarea id="leaveReason" placeholder="Brief reason for leave..."></textarea>
+      <div class="overlay-btns">
+        <button class="btn-cancel" id="leaveCancelBtn">Cancel</button>
+        <button class="btn-submit" id="leaveSubmitBtn">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "";
+    let currentUser = "";
+    let isAdminUser = false;
+    let userBalance = [];
+
+    // ---- Helpers ----
+    function setMsg(text, type="ok") {
+      const el = document.getElementById("msg");
+      el.textContent = text;
+      el.className = "msg show " + type;
+      setTimeout(() => { el.classList.remove("show"); }, 5000);
+    }
+
+    async function post(path, body) {
+      const r = await fetch(API_BASE + path, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        credentials: "include", body: JSON.stringify(body)
+      });
+      return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
+    }
+
+    async function get(path) {
+      const r = await fetch(API_BASE + path, { credentials: "include" });
+      return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
+    }
+
+    // ---- Session ----
+    async function checkSession() {
+      const res = await get("/api/me");
+      if (!res.ok) { window.location.href = "/"; return; }
+      currentUser = res.data.username;
+      document.getElementById("dispUser").textContent = currentUser;
+      const u = currentUser.toLowerCase();
+      isAdminUser = u.includes("admin") || u.includes("shawn");
+      if (isAdminUser) {
+        // Hide staff-only attendance boxes
+        document.getElementById("clockInBox").style.display = "none";
+        document.getElementById("clockOutBox").style.display = "none";
+        document.getElementById("recordsBox").style.display = "none";
+        // Show admin-only boxes
+        document.getElementById("adminBox").style.display = "flex";
+        document.getElementById("manageLeaveBox").style.display = "flex";
+        document.getElementById("staffLeaveBox").style.display = "flex";
+      }
+    }
+    checkSession();
+
+    // ---- Geolocation ----
+    let cachedLocation = null;
+    async function getBrowserLocation() {
+      if (cachedLocation) return cachedLocation;
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve({ source: "none" });
+        navigator.geolocation.getCurrentPosition(
+          (pos) => { cachedLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude, source: "browser" }; resolve(cachedLocation); },
+          () => resolve({ source: "none" }),
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      });
+    }
+
+    // ---- Clock In/Out ----
+    document.getElementById("clockInBox").onclick = async () => {
+      setMsg("Getting location...", "info");
+      const location = await getBrowserLocation();
+      const res = await post("/api/clock", { location, action: "Clock In" });
+      if (!res.ok) return setMsg(res.data.error || "Clock In failed", "err");
+      setMsg("Clock In successful!  " + (res.data.time || ""), "ok");
+    };
+    document.getElementById("clockOutBox").onclick = async () => {
+      setMsg("Getting location...", "info");
+      const location = await getBrowserLocation();
+      const res = await post("/api/clock", { location, action: "Clock Out" });
+      if (!res.ok) return setMsg(res.data.error || "Clock Out failed", "err");
+      setMsg("Clock Out successful!  " + (res.data.time || ""), "ok");
+    };
+
+    // ---- Attendance Records ----
+    let allEvents = []; // store loaded events for filtering
+
+    function formatMinutes(m) {
+      if (!m || m <= 0) return "";
+      const h = Math.floor(m / 60); const mins = m % 60;
+      return h > 0 ? h + "h " + mins + "m" : mins + "m";
+    }
+
+    function parseRecordDate(timeStr) {
+      if (!timeStr) return null;
+      try { return new Date(timeStr); } catch(e) { return null; }
+    }
+
+    function filterEvents(events) {
+      const nameVal  = (document.getElementById("recFilterName")?.value || "").toLowerCase().trim();
+      const fromVal  = document.getElementById("recFilterFrom")?.value || "";
+      const toVal    = document.getElementById("recFilterTo")?.value || "";
+      const otVal    = document.getElementById("recFilterOT")?.value || "all";
+      const eventVal = document.getElementById("recFilterEvent")?.value || "all";
+
+      const fromDate = fromVal ? new Date(fromVal + "T00:00:00") : null;
+      const toDate   = toVal   ? new Date(toVal   + "T23:59:59") : null;
+
+      return events.filter(e => {
+        if (nameVal && !(e.username || "").toLowerCase().includes(nameVal)) return false;
+        if (fromDate || toDate) {
+          const d = parseRecordDate(e.login_time);
+          if (d) {
+            if (fromDate && d < fromDate) return false;
+            if (toDate   && d > toDate)   return false;
+          }
+        }
+        if (otVal === "ot"    && !(e.ot_minutes > 0)) return false;
+        if (otVal === "no-ot" && (e.ot_minutes > 0))  return false;
+        if (eventVal !== "all" && e.event_type !== eventVal) return false;
+        return true;
+      });
+    }
+
+    function renderRecordCards(events) {
+      let html = '';
+      if (!events || events.length === 0) return '<div class="no-records">No records match your filters.</div>';
+      for (const e of events) {
+        const isCI = (e.event_type || "").includes("Clock In");
+        let badges = "";
+        if (e.is_late) badges += '<span class="badge-late">LATE</span>';
+        if (e.ot_minutes > 0) badges += '<span class="badge-ot">OT ' + formatMinutes(e.ot_minutes) + '</span>';
+        const ws = e.working_minutes > 0 ? formatMinutes(e.working_minutes) : "";
+        html += `<div class="record-card">
+          <div class="record-header">
+            <span class="record-user">${e.username || "—"}</span>
+            <span class="record-type ${isCI ? 'type-clockin' : 'type-clockout'}">${e.event_type || "—"}</span>
+          </div>
+          <div class="record-row"><span class="label">Time</span> ${e.login_time || "—"} ${badges}</div>
+          ${e.area ? '<div class="record-row"><span class="label">Area</span> ' + e.area + '</div>' : ''}
+          ${ws ? '<div class="record-row"><span class="label">Working</span> ' + ws + '</div>' : ''}
+        </div>`;
+      }
+      return html;
+    }
+
+    function renderRecords(events) {
+      allEvents = events;
+      const s = document.getElementById("content-section");
+      const showName = isAdminUser;
+
+      let html = '<h3>Attendance Records</h3>';
+
+      // Filter bar
+      html += '<div style="background:#fff;border-radius:10px;border:1px solid #e0e0e0;padding:12px;margin-bottom:12px;">';
+      if (showName) {
+        html += '<input type="text" id="recFilterName" placeholder="Filter by name…" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:14px;margin-bottom:8px;outline:none;" />';
+      }
+      html += '<div style="display:flex;gap:8px;margin-bottom:8px;">';
+      html += '<input type="date" id="recFilterFrom" style="flex:1;padding:8px 6px;border:1px solid #ccc;border-radius:6px;font-size:13px;outline:none;" />';
+      html += '<input type="date" id="recFilterTo" style="flex:1;padding:8px 6px;border:1px solid #ccc;border-radius:6px;font-size:13px;outline:none;" />';
+      html += '</div>';
+      html += '<div style="display:flex;gap:8px;">';
+      html += '<select id="recFilterOT" style="flex:1;padding:8px 6px;border:1px solid #ccc;border-radius:6px;font-size:13px;outline:none;"><option value="all">All OT</option><option value="ot">Has OT</option><option value="no-ot">No OT</option></select>';
+      html += '<select id="recFilterEvent" style="flex:1;padding:8px 6px;border:1px solid #ccc;border-radius:6px;font-size:13px;outline:none;"><option value="all">All Events</option><option value="Clock In">Clock In</option><option value="Clock Out">Clock Out</option></select>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:8px;margin-top:8px;">';
+      html += '<button id="recSumOTBtn" style="flex:1;padding:8px;border:none;border-radius:6px;background:#6f42c1;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">∑ Sum OT</button>';
+      html += '<button id="recClearBtn" style="flex:1;padding:8px;border:none;border-radius:6px;background:#6c757d;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Clear</button>';
+      html += '</div>';
+      html += '</div>';
+
+      html += '<div id="recOTSummary" style="display:none;background:linear-gradient(135deg,#f3e5f5 0%,#fff 100%);border:1px solid #ce93d8;border-radius:10px;padding:14px;margin-bottom:12px;"></div>';
+      html += '<div id="recCount" style="font-size:13px;color:#666;margin-bottom:8px;"></div>';
+      html += '<div id="recCards"></div>';
+
+      s.innerHTML = html;
+
+      // Apply initial render
+      applyRecordFilters();
+
+      // Attach events
+      if (showName) document.getElementById("recFilterName").addEventListener("keyup", applyRecordFilters);
+      document.getElementById("recFilterFrom").addEventListener("change", applyRecordFilters);
+      document.getElementById("recFilterTo").addEventListener("change", applyRecordFilters);
+      document.getElementById("recFilterOT").addEventListener("change", applyRecordFilters);
+      document.getElementById("recFilterEvent").addEventListener("change", applyRecordFilters);
+
+      document.getElementById("recClearBtn").onclick = () => {
+        if (showName && document.getElementById("recFilterName")) document.getElementById("recFilterName").value = "";
+        document.getElementById("recFilterFrom").value = "";
+        document.getElementById("recFilterTo").value = "";
+        document.getElementById("recFilterOT").value = "all";
+        document.getElementById("recFilterEvent").value = "all";
+        document.getElementById("recOTSummary").style.display = "none";
+        applyRecordFilters();
+      };
+
+      document.getElementById("recSumOTBtn").onclick = () => {
+        const filtered = filterEvents(allEvents);
+        let totalOT = 0;
+        const perUser = {};
+        for (const e of filtered) {
+          if (e.ot_minutes > 0) {
+            totalOT += e.ot_minutes;
+            const u = e.username || "?";
+            perUser[u] = (perUser[u] || 0) + e.ot_minutes;
+          }
+        }
+        const otCount = filtered.filter(e => e.ot_minutes > 0).length;
+        const box = document.getElementById("recOTSummary");
+        let h = `<div style="font-weight:700;font-size:15px;color:#6f42c1;margin-bottom:4px;">∑ OT Summary</div>`;
+        h += `<div style="font-size:28px;font-weight:800;color:#6f42c1;">${formatMinutes(totalOT) || "0m"}</div>`;
+        h += `<div style="font-size:12px;color:#666;margin-top:2px;">${otCount} record(s) with OT</div>`;
+        const sorted = Object.entries(perUser).sort((a,b) => b[1] - a[1]);
+        if (sorted.length > 0) {
+          h += '<div style="margin-top:8px;border-top:1px solid #e0d0f0;padding-top:6px;">';
+          for (const [user, mins] of sorted) {
+            h += `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:13px;"><span style="font-weight:600;">${user}</span><span style="font-weight:700;color:#6f42c1;">${formatMinutes(mins)}</span></div>`;
+          }
+          h += '</div>';
+        }
+        box.innerHTML = h;
+        box.style.display = "block";
+      };
+    }
+
+    function applyRecordFilters() {
+      const filtered = filterEvents(allEvents);
+      document.getElementById("recCards").innerHTML = renderRecordCards(filtered);
+      document.getElementById("recCount").textContent = `Showing ${filtered.length} of ${allEvents.length} record(s)`;
+      document.getElementById("recOTSummary").style.display = "none";
+    }
+
+    document.getElementById("recordsBox").onclick = async () => {
+      const res = await get("/api/login-events");
+      if (!res.ok) return setMsg(res.data.error || "Failed to load", "err");
+      setMsg("Loaded " + res.data.length + " record(s)", "ok");
+      renderRecords(res.data);
+    };
+
+    // ---- Admin: All Records ----
+    document.getElementById("adminBox").onclick = () => {
+      if (window.innerWidth >= 768) { window.location.href = "/admin/logins"; }
+      else { document.getElementById("recordsBox").click(); }
+    };
+
+    // ---- Leave Balance ----
+    async function loadBalance() {
+      const res = await get("/api/leave-balance");
+      if (res.ok) userBalance = res.data;
+      return res;
+    }
+
+    function renderBalance(balance) {
+      const s = document.getElementById("content-section");
+      if (!balance || balance.length === 0) {
+        s.innerHTML = '<div class="no-records">No leave entitlements set up yet. Please contact admin.</div>';
+        return;
+      }
+      let html = '<h3>Leave Balance</h3>';
+      for (const b of balance) {
+        const remaining = b.balance;
+        const low = remaining <= 2 ? " low" : "";
+        html += `<div class="balance-card">
+          <div>
+            <div class="bl-type">${b.leave_type}</div>
+            <div class="bl-detail">Total: ${b.total} &nbsp;|&nbsp; Used: ${b.used} &nbsp;|&nbsp; Pending: ${b.pending}</div>
+          </div>
+          <div class="bl-number${low}">${remaining}</div>
+        </div>`;
+      }
+      s.innerHTML = html;
+    }
+
+    document.getElementById("balanceBox").onclick = async () => {
+      const res = await loadBalance();
+      if (!res.ok) return setMsg(res.data.error || "Failed to load", "err");
+      renderBalance(res.data);
+      setMsg("Leave balance loaded", "ok");
+    };
+
+    // ---- Leave Application ----
+    async function updateLeaveBalInfo() {
+      if (userBalance.length === 0) await loadBalance();
+      const lt = document.getElementById("leaveType").value;
+      const entry = userBalance.find(b => b.leave_type === lt);
+      const el = document.getElementById("leaveBalInfo");
+      if (entry) {
+        el.innerHTML = `<strong>${entry.balance}</strong> day(s) remaining out of <strong>${entry.total}</strong> &nbsp;(${entry.used} used, ${entry.pending} pending)`;
+      } else {
+        el.innerHTML = "No entitlement set. Please contact admin.";
+      }
+    }
+
+    document.getElementById("leaveType").onchange = updateLeaveBalInfo;
+
+    document.getElementById("leaveBox").onclick = async () => {
+      const today = new Date().toISOString().split("T")[0];
+      document.getElementById("leaveFrom").value = today;
+      document.getElementById("leaveTo").value = today;
+      document.getElementById("leaveReason").value = "";
+      document.getElementById("leaveOverlay").classList.add("show");
+      await updateLeaveBalInfo();
+    };
+
+    document.getElementById("leaveCancelBtn").onclick = () => {
+      document.getElementById("leaveOverlay").classList.remove("show");
+    };
+
+    document.getElementById("leaveSubmitBtn").onclick = async () => {
+      const leaveType = document.getElementById("leaveType").value;
+      const from = document.getElementById("leaveFrom").value;
+      const to = document.getElementById("leaveTo").value;
+      const reason = document.getElementById("leaveReason").value.trim();
+      if (!from || !to) return setMsg("Please select dates", "err");
+      if (from > to) return setMsg("'From' must be before 'To'", "err");
+
+      const res = await post("/api/leave", { leave_type: leaveType, from_date: from, to_date: to, reason });
+      if (!res.ok) return setMsg(res.data.error || "Submit failed", "err");
+      document.getElementById("leaveOverlay").classList.remove("show");
+      setMsg("Leave submitted! " + res.data.days + " day(s)", "ok");
+      userBalance = []; // refresh next time
+    };
+
+    // ---- Admin: Manage Leave ----
+    document.getElementById("manageLeaveBox").onclick = async () => {
+      const s = document.getElementById("content-section");
+      s.innerHTML = '<div class="no-records">Loading...</div>';
+
+      // Load both entitlements and pending leaves
+      const [entRes, leaveRes] = await Promise.all([
+        get("/api/admin/entitlements"),
+        get("/api/leaves")
+      ]);
+
+      let html = '';
+
+      // Pending leave applications
+      if (leaveRes.ok && leaveRes.data.length > 0) {
+        const pending = leaveRes.data.filter(l => l.status === "Pending");
+        if (pending.length > 0) {
+          html += '<h3>Pending Leave Requests</h3>';
+          for (const l of pending) {
+            html += `<div class="leave-card">
+              <div class="lc-header">
+                <span class="lc-type">${l.username} — ${l.leave_type}</span>
+                <span class="lc-status status-pending">Pending</span>
+              </div>
+              <div class="lc-row"><span class="label">Dates</span> ${l.from_date} → ${l.to_date} (${l.days || '?'} days)</div>
+              ${l.reason ? '<div class="lc-row"><span class="label">Reason</span> ' + l.reason + '</div>' : ''}
+              <div class="admin-actions">
+                <button class="btn-approve" onclick="leaveAction(${l.id}, 'Approved')">✓ Approve</button>
+                <button class="btn-reject" onclick="leaveAction(${l.id}, 'Rejected')">✗ Reject</button>
+              </div>
+            </div>`;
+          }
+        }
+
+        // Show recent decided leaves
+        const decided = leaveRes.data.filter(l => l.status !== "Pending").slice(0, 10);
+        if (decided.length > 0) {
+          html += '<h3 style="margin-top:20px;">Recent Decisions</h3>';
+          for (const l of decided) {
+            const sc = l.status === "Approved" ? "status-approved" : "status-rejected";
+            html += `<div class="leave-card">
+              <div class="lc-header">
+                <span class="lc-type">${l.username} — ${l.leave_type}</span>
+                <span class="lc-status ${sc}">${l.status}</span>
+              </div>
+              <div class="lc-row"><span class="label">Dates</span> ${l.from_date} → ${l.to_date} (${l.days || '?'} days)</div>
+            </div>`;
+          }
+        }
+      }
+
+      // Staff entitlements management
+      if (entRes.ok) {
+        html += '<h3 style="margin-top:20px;">Staff Leave Entitlements</h3>';
+        if (entRes.data.length === 0) {
+          html += '<div class="no-records">No staff registered yet.</div>';
+        }
+        for (const staff of entRes.data) {
+          html += `<div class="ent-staff-card" data-uid="${staff.user_id}">
+            <div class="ent-name">${staff.username}</div>`;
+          for (const e of staff.entitlements) {
+            html += `<div class="ent-row">
+              <span class="ent-label">${e.leave_type}</span>
+              <input type="number" min="0" step="1" value="${e.total}"
+                     class="ent-input" data-type="${e.leave_type}" />
+              <span class="ent-info">used ${e.used}</span>
+            </div>`;
+          }
+          html += `<button class="ent-save-btn" onclick="saveEntitlement(${staff.user_id}, this)">Save</button>
+          </div>`;
+        }
+      }
+
+      if (!html) html = '<div class="no-records">Nothing to show.</div>';
+      s.innerHTML = html;
+      setMsg("Leave management loaded", "ok");
+    };
+
+    async function leaveAction(leaveId, action) {
+      const res = await post("/api/admin/leave-action", { leave_id: leaveId, action });
+      if (!res.ok) return setMsg(res.data.error || "Action failed", "err");
+      setMsg("Leave " + action.toLowerCase(), "ok");
+      // Refresh
+      document.getElementById("manageLeaveBox").click();
+    }
+
+    async function saveEntitlement(userId, btn) {
+      const card = btn.closest(".ent-staff-card");
+      const inputs = card.querySelectorAll(".ent-input");
+      const entitlements = {};
+      inputs.forEach(inp => { entitlements[inp.dataset.type] = parseFloat(inp.value) || 0; });
+
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+      const res = await post("/api/admin/entitlements", { user_id: userId, entitlements });
+      btn.disabled = false;
+      btn.textContent = "Save";
+      if (!res.ok) return setMsg(res.data.error || "Save failed", "err");
+      setMsg("Successfully updated!", "ok");
+    }
+
+    // ---- Admin: All Staff Leave Overview ----
+    document.getElementById("staffLeaveBox").onclick = async () => {
+      const s = document.getElementById("content-section");
+      s.innerHTML = '<div class="no-records">Loading...</div>';
+
+      const [entRes, leaveRes] = await Promise.all([
+        get("/api/admin/entitlements"),
+        get("/api/leaves")
+      ]);
+      if (!entRes.ok) return setMsg(entRes.data.error || "Failed to load", "err");
+
+      const allLeaves = leaveRes.ok ? leaveRes.data : [];
+      let html = '<h3>Staff Leave Overview</h3>';
+
+      if (!entRes.data.length) {
+        html += '<div class="no-records">No staff registered yet.</div>';
+      }
+
+      for (const staff of entRes.data) {
+        html += `<div class="staff-overview"><div class="so-name">${staff.username}</div>`;
+
+        // Balance rows
+        for (const e of staff.entitlements) {
+          const rem = e.balance;
+          const cls = rem <= 2 ? "low" : "ok";
+          html += `<div class="so-bal-row">
+            <span class="so-type">${e.leave_type}</span>
+            <span>Total: ${e.total} &nbsp;|&nbsp; Used: ${e.used} &nbsp;|&nbsp; Pending: ${e.pending}</span>
+            <span class="so-remain ${cls}">${rem}</span>
+          </div>`;
+        }
+
+        // Recent leave records for this staff
+        const staffLeaves = allLeaves.filter(l => l.username === staff.username).slice(0, 5);
+        if (staffLeaves.length > 0) {
+          html += '<div class="so-leaves">';
+          for (const l of staffLeaves) {
+            let bgColor = "#ffc107";
+            let txtColor = "#333";
+            if (l.status === "Approved") { bgColor = "#28a745"; txtColor = "#fff"; }
+            else if (l.status === "Rejected") { bgColor = "#dc3545"; txtColor = "#fff"; }
+            html += `<div class="so-leave-item">
+              <span>${l.leave_type} &nbsp; ${l.from_date} → ${l.to_date} (${l.days || '?'}d)</span>
+              <span class="so-badge" style="background:${bgColor};color:${txtColor};">${l.status}</span>
+            </div>`;
+          }
+          html += '</div>';
+        }
+
+        html += '</div>';
+      }
+
+      s.innerHTML = html;
+      setMsg("Staff leave overview loaded", "ok");
+    };
+
+    // ---- Logout ----
+    document.getElementById("logoutBtn").onclick = async () => {
+      await post("/api/logout", {});
+      window.location.href = "/";
+    };
+  </script>
+</body>
+</html>
