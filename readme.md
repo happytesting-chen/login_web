@@ -102,3 +102,13 @@ Geolocation requires explicit user permission
 Laptop may return coarse or empty location; mobile testing may be more accurate
 
 Use a valid User-Agent header when calling Nominatim
+
+## usage for admin
+Admin (Check Records from Own Laptop)
+Open https://unsought-idiosyncratically-raeann.ngrok-free.dev on your laptop
+Log in (you need an account too — just register one for admin)
+Then visit https://unsought-idiosyncratically-raeann.ngrok-free.dev/admin/logins
+You'll see all staff's login records
+
+
+## ngrok http 5000
