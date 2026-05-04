@@ -18,7 +18,7 @@ import requests
 # App setup
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-in-production")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 bcrypt = Bcrypt(app)
 CORS(app, supports_credentials=True)  # allow cookies + any origin during dev
 
@@ -950,7 +950,8 @@ def admin_logins():
 # Main
 # ---------------------------------------------------------------------------
 
+init_db()  # runs on every startup (gunicorn or direct)
+
 if __name__ == "__main__":
-    init_db()
     # For local dev only. Use a real WSGI server in production.
     app.run(debug=False)
