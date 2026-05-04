@@ -953,4 +953,4 @@ def admin_logins():
 if __name__ == "__main__":
     init_db()
     # For local dev only. Use a real WSGI server in production.
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=False)
