@@ -170,14 +170,18 @@
     }
 
     async function post(path, body) {
-      const r = await fetch(API_BASE + path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include", // IMPORTANT: send/receive session cookie
-        body: JSON.stringify(body)
-      });
-      const data = await r.json().catch(() => ({}));
-      return { ok: r.ok, status: r.status, data };
+      try {
+        const r = await fetch(API_BASE + path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include", // IMPORTANT: send/receive session cookie
+          body: JSON.stringify(body)
+        });
+        const data = await r.json().catch(() => ({}));
+        return { ok: r.ok, status: r.status, data };
+      } catch (err) {
+        return { ok: false, status: 0, data: { error: "Cannot reach server. Check your connection." } };
+      }
     }
 
     // ---- Register form show/hide ----
@@ -196,7 +200,7 @@
       if (username.length < 3) return setMsg("Username must be at least 3 characters.", false);
       if (password.length < 8) return setMsg("Password must be at least 8 characters.", false);
       const res = await post("/api/register", { username, password });
-      if (!res.ok) return setMsg(res.data.error || "Register failed", false);
+      if (!res.ok) return setMsg(res.data.error || `Registration failed (HTTP ${res.status})`, false);
       setMsg("Registered! You can now login.");
       document.getElementById("registerForm").style.display = "none";
       // Pre-fill login fields with the newly registered credentials
